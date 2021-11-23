@@ -1,0 +1,15 @@
+
+:root {
+    --shadow: 0 2px 8px rgba(0, 0, 0, .15);
+    --choose-color: #1890ff;
+    --hover-color: #f759ab;
+    --hover-background: #f6f6f6;
+}
+
+.ant-card-shadow {
+    box-shadow: var(--shadow);
+}
+
+h3 {
+    margin-bottom: 0;
+}
