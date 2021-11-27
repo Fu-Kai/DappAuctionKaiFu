@@ -30,7 +30,7 @@
             <a-button type="danger"
                       v-if="new Date(state.data.endTime * 1000) > new Date() && state.data.endFlg == false && account !== state.data.beneficiary"
                       @click="openModal">我要出价</a-button>
-            <a-tooltip placement="topRight" title="将收取少量Gas费">
+            <a-tooltip placement="topRight" title="将打款给卖家成交价与奖励的KFAC，并收取少量Gas费">
               <a-button type="primary"
                         style="
                                background-color: #fea800;
@@ -169,7 +169,7 @@ import {
   addListener,
   setAuctionEnd,
   withdrawBond,
-  getThisAuctionHighestBid
+  getThisAuctionHighestBid, rewardPersonErcPoints
 } from '@/api/contract'
 import {useRoute} from 'vue-router'
 import {message, Empty} from 'ant-design-vue';
@@ -262,6 +262,17 @@ export default defineComponent({
         closeModal();
       } catch (e) {
         message.error('确认收货失败')
+      }
+      //奖励卖家KFAC
+      try {
+        let  thisAuction = await getOneAuction(id);
+        await rewardPersonErcPoints(await getAccount(), thisAuction.beneficiary,Math.ceil(thisAuction.highestBid/2));
+        console.log(thisAuction.beneficiary)
+        message.success('奖励卖家' + Math.ceil(thisAuction.highestBid/2) +  'KFAC成功');
+      }
+      catch (e) {
+        message.error('奖励失败');
+        console.log(e);
       }
     }
 

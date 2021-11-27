@@ -13,9 +13,11 @@
       英式拍卖
     </h1>
 
-    <a-switch @change="darkSwitch" style="float: right; margin: 60px 30px 0 0;" checked-children="明亮模式" un-checked-children="暗黑模式"
+    <a-switch @change="darkSwitch" style="float: right; margin: 60px 30px 0 0;" checked-children="明亮模式"
+              un-checked-children="暗黑模式"
               v-model:checked="checked1"/>
-    <a-tag color="black" style="float: right; margin: 60px 30px 0 0;"><a @click="GetContractBalance">点击查询合约内总担保资金</a></a-tag>
+    <a-tag color="black" style="float: right; margin: 60px 30px 0 0;"><a @click="GetContractBalance">点击查询合约内总担保资金</a>
+    </a-tag>
   </header>
 </template>
 
@@ -23,19 +25,21 @@
 import {ref, onMounted, toRefs, defineComponent, reactive} from 'vue'
 import {useRouter} from 'vue-router'
 import {message} from 'ant-design-vue'
-import {authenticate, getAccount, addListener, getContractBalance, getBalance} from '@/api/contract'
+import {authenticate, getAccount, addListener, getContractBalance, getBalance, getPersonErcPoints} from '@/api/contract'
 
 export default defineComponent({
 
   setup() {
     message.config({
-      duration: 1,
+      duration: 1.9,
       maxCount: 3,
     });
+
     async function GetContractBalance() {
       const balance = await getContractBalance();
-      message.success('合约内总担保资金：' + balance.toString() + ' Ether');
+      message.success('本站合约内总担保资金：' + balance.toString() + ' ETH');
     }
+
     const state = reactive({
       checked1: true,
     });
@@ -50,10 +54,13 @@ export default defineComponent({
     // 认证
     const account = ref('认证');
 
-    async function handleClick() {``
+    async function handleClick() {
       await authenticate();
       account.value = await getAccount();
-      message.success('当前账户：' + account.value +' 余额：' + await getBalance() + ' Ether');
+      let strHead = account.value[0] + account.value[1] + account.value[2] + account.value[3] + account.value[4];
+      let strTail = '...' + account.value[account.value.length - 3] + account.value[account.value.length - 2] + account.value[account.value.length - 1];
+      let strOut = strHead + strTail;
+      message.success('账户：' + strOut + " | ETH" + ' 余额：' + await getBalance() + ' | KFAC余额：' + await getPersonErcPoints());
     }
 
     function darkSwitch() {
@@ -63,7 +70,7 @@ export default defineComponent({
     const router = useRouter();
     handleClick();
     addListener(handleClick)
-    return {scrollTop, handleClick, account, ...toRefs(state),darkSwitch,GetContractBalance}
+    return {scrollTop, handleClick, account, ...toRefs(state), darkSwitch, GetContractBalance}
   }
 })
 </script>

@@ -1,0 +1,144 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "acc",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "ercPoints",
+        "type": "uint256"
+      }
+    ],
+    "name": "ercPointsIncrease",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_acc",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_ercPoints",
+        "type": "uint256"
+      }
+    ],
+    "name": "deductPersonErcPoints",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_acc",
+        "type": "address"
+      }
+    ],
+    "name": "getPersonErcPoints",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getSupplierBalances",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getThisContractErcBalance",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "persons",
+    "outputs": [
+      {
+        "internalType": "address payable",
+        "name": "account",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "ercPoints",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_acc",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_ercPoints",
+        "type": "uint256"
+      }
+    ],
+    "name": "rewardPersonErcPoints",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "ercaddress_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "ercPointsSupplier_",
+        "type": "address"
+      }
+    ],
+    "name": "setErc",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

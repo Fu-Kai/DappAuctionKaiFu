@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.1;
+pragma solidity ^0.8.0;
 
 contract OpenAuction {
+
     // 出价人结构定义
     struct Bidder {
         address payable addr;      // 出价人的地址
         uint bidAmount;            // 出价数额
         uint bidTime;              // 出价时间
     }
+
     // 物品状态枚举类型
     enum ItemCondition {
         Bidding,                    //正在拍卖（有出价，在期间内）
@@ -16,6 +18,7 @@ contract OpenAuction {
         successedAuction,           //拍卖成功 （买家点击收货，将货款和保证金一起结账给卖家）
         inRoad                      //卖家发货中（时间到期，并且已产生最高出价者）
     }
+
     struct Auction {
         string title;                                   //商品标题
         string info;                                    //商品简介
@@ -38,7 +41,7 @@ contract OpenAuction {
     event AuctionEnded(address winner, uint amount, uint id);
 
     //启动拍卖活动
-    function newAuctionStart(address payable beneficiary, string memory title, string memory info, uint amountStart, uint endTime) public payable returns(uint) {
+    function newAuctionStart(address payable beneficiary, string memory title, string memory info, uint amountStart, uint endTime, uint _bond) public payable returns(uint) {
         //不能早于当前时间，起拍价格要大于0，保证金大于2*0
         require(endTime > block.timestamp);
         require(amountStart > 0);
@@ -55,8 +58,7 @@ contract OpenAuction {
         a.startFlg = true;
         a.endFlg = false;
         a.condition = ItemCondition.noYetBid;
-        //双倍起拍价格的保证金
-        a.bond = 2 * amountStart;
+        a.bond = _bond;
         return auctionsLen;
     }
     function getAuctionCondition(uint id) public view returns(ItemCondition) {
@@ -109,9 +111,11 @@ contract OpenAuction {
         }
         return maxn;
     }
+
     function getBalance() public view returns (uint) {
         return address(this).balance;
     }
+
     //拍卖截止后无任何人出价，拍卖发起人可申请退保证金
     function withdrawBond(uint id) public {
         //msgsender要是拍卖发起人
@@ -125,8 +129,9 @@ contract OpenAuction {
         auctions[id].beneficiary.transfer(auctions[id].bond);
         auctions[id].bond = 0;
     }
+
     //结束拍卖，结账
-    function setAuctionEnd(uint id) public{
+    function setAuctionEnd(uint id) public {
         //区块时间需大于拍卖期限 最终最高出价者确认收货才能结束拍卖 拍卖需还没设置为已结束
         require(block.timestamp >= auctions[id].endTime, "auction not yet ended");
         require(auctions[id].highestBidder == msg.sender);
@@ -139,6 +144,7 @@ contract OpenAuction {
         auctions[id].beneficiary.transfer(auctions[id].highestBid);
         //将保证金，移交给受益人
         auctions[id].beneficiary.transfer(auctions[id].bond);
+        auctions[id].bond = 0;
     }
 
 }

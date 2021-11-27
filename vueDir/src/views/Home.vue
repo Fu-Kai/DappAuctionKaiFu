@@ -16,7 +16,6 @@
         </h3>
 
       </template>
-
       <a-table :columns="columns" :loading="state.loading" :data-source="state.data" >
         <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
           <div style="width:163px;padding: 8px;">
@@ -102,6 +101,14 @@
           <h3 style="text-align: center">发起拍卖</h3>
           <h5 style="text-align: center; color: red">需支付的保证金为 <span style="color: cornflowerblue">起拍金额</span>
             的两倍,拍卖结束后退回</h5>
+          <h5 style="text-align: center; color: black">若你拥有本站
+            <span style="color: gold">KFAC</span>
+            积分代币
+            <a-tooltip placement="topRight" title="当每件物品成功拍卖之后，卖家会获得与成交价的一半等额的KFAC代币" color="blue">
+            <QuestionCircleOutlined/>
+            </a-tooltip>
+            ，你可以用来抵扣等额的保证金（1 KFAC 抵扣 1 ETH)
+          </h5>
         </template>
         <a-icon type="ant-design"/>
         <create-form :model="model" :form="form" :fields="fields"/>
@@ -124,10 +131,11 @@ import {
   getAllAuctions,
   Auction,
   newAuctionStart,
-  addListener
+  addListener,
+  getTotalSupply, getCoinName, getPersonErcPoints, rewardPersonErcPoints, approve, deductPersonErcPoints
 } from '@/api/contract'
 import {message} from 'ant-design-vue'
-import {CheckCircleOutlined, SyncOutlined, CloseCircleOutlined,SearchOutlined} from '@ant-design/icons-vue'
+import {CheckCircleOutlined, SyncOutlined, CloseCircleOutlined,SearchOutlined,QuestionCircleOutlined} from '@ant-design/icons-vue'
 import {useRouter} from 'vue-router'
 import _default from "ant-design-vue/es/color-picker";
 
@@ -138,7 +146,7 @@ import _default from "ant-design-vue/es/color-picker";
 export default defineComponent({
 
   name: 'Home',
-  components: {Modal, CreateForm, CheckCircleOutlined, SyncOutlined, CloseCircleOutlined,SearchOutlined},
+  components: {Modal, CreateForm, CheckCircleOutlined, SyncOutlined, CloseCircleOutlined,SearchOutlined,QuestionCircleOutlined},
   setup() {
     const searchState = reactive({
       searchText: '',
@@ -217,6 +225,8 @@ export default defineComponent({
     })
 
     async function fetchData() {
+      console.log('积分余额',await getPersonErcPoints());
+      console.log(await getTotalSupply());
       state.loading = true;
       try {
         state.data = await getAllAuctions();
@@ -241,7 +251,9 @@ export default defineComponent({
       title: '',
       info: '',
       amountStart: 0,
+      deduction: 0,
       date: null,
+      bond: 0,
     })
 
     const fields = reactive<Fields>({
@@ -269,11 +281,22 @@ export default defineComponent({
       amountStart: {
         type: 'number',
         label: '起拍金额',
-        min: 0.01
+        min: 1,
+      },
+      deduction: {
+        type: 'number',
+        label: '是否抵扣',
+        disabled: true,
+        min: 0
       },
       date: {
         type: 'time',
         label: '截止日期',
+      },
+      bond: {
+        type: 'number',
+        label: '还需缴保证金',
+        min:1
       },
     })
     watch(() => state.data, async () => {
@@ -293,8 +316,17 @@ export default defineComponent({
       finish: async () => {
         const seconds = Math.ceil(new Date(model.date).getTime() / 1000);
         try {
-          const res = await newAuctionStart(model.account, model.title, model.info, model.amountStart, seconds);
-          console.log(res)
+          let _bond = model.amountStart*2-model.deduction;
+          console.log(model.account, model.title, model.info, model.amountStart, seconds, _bond);
+          if(model.deduction != 0) {
+            try {
+              await deductPersonErcPoints(await getAccount(), model.deduction)
+              message.success('扣除' + model.deduction+'KFAC成功')
+            } catch (e) {
+              message.error('扣除KFAC失败')
+            }
+          }
+          await newAuctionStart(model.account, model.title, model.info, model.amountStart, seconds, _bond);
           message.success('已上架~')
           closeModal();
           await fetchData();
@@ -304,7 +336,6 @@ export default defineComponent({
         }
       }
     })
-
     const handleSearch = (selectedKeys: string[], confirm: () => void, dataIndex: string) => {
       confirm();
       searchState.searchText = selectedKeys[0];

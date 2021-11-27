@@ -344,7 +344,13 @@ const columnsBene = [
         value: '123',
       }
     ],
-    onFilter: (value: any, record: { endTime: number, highestBid: number | any[]; }) => (new Date(record.endTime * 1000) < new Date() && record.highestBid == 0),
+    onFilter: (value: any, record: { endTime: number, highestBid: number | any[],bond: number; }) => (new Date(record.endTime * 1000) < new Date() && record.highestBid == 0 && record.bond != 0),
+  },
+  {
+    title: '保证金余额',
+    dataIndex: 'bond',
+    key: 'bond',
+    align: 'center',
   },
   {
     title: '详情',
