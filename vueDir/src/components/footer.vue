@@ -9,7 +9,6 @@
     </ul>
 
 
-
   </div>
 
   <a-layout-footer :style="{ textAlign: 'center', backgroundColor: '#222'}">

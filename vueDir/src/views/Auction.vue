@@ -2,6 +2,7 @@
   <div>
     <a-back-top/>
   </div>
+
   <div>
     <a-card
         class="ant-card-shadow"
@@ -35,7 +36,7 @@
                         style="
                                background-color: #fea800;
                                border-color: #fea800;"
-                        v-if="new Date(state.data.endTime * 1000) < new Date() && state.data.highestBid !== 0 && state.data.highestBidder === account && !state.data.endFlg"
+                        v-if="new Date(state.data.endTime * 1000) < new Date() && state.data.highestBid != 0 && state.data.highestBidder === account && !state.data.endFlg"
                         @click="SetAuctionEnd">确认收货
               </a-button>
             </a-tooltip>
@@ -48,7 +49,7 @@
         </h3>
       </template>
       <a-descriptions bordered v-if="key==='info'">
-        <a-descriptions-item label="商品标题" :span="2">
+        <a-descriptions-item label="拍卖标题" :span="2">
           {{ state.data.title }}
         </a-descriptions-item>
         <a-descriptions-item label="拍卖发起人" :span="2">
@@ -126,11 +127,44 @@
         <!--          <a-progress type="circle" :percent="state.data.success ? 100 : state.data.amount * 100 / state.data.goal"-->
         <!--                      :width="80"/>-->
         <!--        </a-descriptions-item>-->
-        <a-descriptions-item label="商品介绍">
+        <a-descriptions-item label="备注">
           {{ state.data.info }}
         </a-descriptions-item>
       </a-descriptions>
+      <a-descriptions bordered v-if="key==='good'"
+      >
+        <a-descriptions-item label="商品名称" :span="2">
+          {{ stateGood.data.name }}
+        </a-descriptions-item>
+        <a-descriptions-item label="全新/二手" :span="2">
+          <span v-if="stateGood.data.used">
+            二手
+          </span>
+          <span v-else>
+            全新
+          </span>
+        </a-descriptions-item>
+        <a-descriptions-item label="品牌" :span="2">
+          {{ stateGood.data.brand }}
+        </a-descriptions-item>
+        <a-descriptions-item label="拥有者">
+          {{ stateGood.data.owner }}
+        </a-descriptions-item>
+        <!--        <a-descriptions-item label="时间进度">-->
+        <!--          <a-progress type="circle" :percent="state.data.success ? 100 : state.data.amount * 100 / state.data.goal"-->
+        <!--                      :width="80"/>-->
+        <!--        </a-descriptions-item>-->
+        <a-descriptions-item label="商品简介" span="4">
+          {{ stateGood.data.intro }}
+        </a-descriptions-item>
+        <a-descriptions-item label="商品大图" span="4">
+          <img width="285"
+               height="185"
+               alt="logo"
+               :src="'https://ipfs.io/ipfs/'+ stateGood.data.picsHash">
 
+        </a-descriptions-item>
+      </a-descriptions>
       <!--      <Use v-if="key==='use'" :id="id" :data="state.data" :amount="state.data.highestBid"></Use>-->
     </a-card>
 
@@ -141,7 +175,8 @@
       </a-card>
     </Modal>
   </div>
-  <a-divider v-if="state.data.highestBid != 0">竞拍历史</a-divider>
+  <a-divider v-if="state.data.highestBid != 0">竞拍历史
+  </a-divider>
   <div>
     <!--    <a-card class="ant-card-shadow" :bordered="false">-->
     <div>
@@ -163,18 +198,25 @@ import {
   getOneAuction,
   getOneAuctionAllBidInfo,
   Auction,
+  Good,
   Bidder,
   getAccount,
   bid,
   addListener,
   setAuctionEnd,
   withdrawBond,
-  getThisAuctionHighestBid, rewardPersonErcPoints
+  getThisAuctionHighestBid, rewardPersonErcPoints, getOneGoodOfAuction
 } from '@/api/contract'
 import {useRoute} from 'vue-router'
 import {message, Empty} from 'ant-design-vue';
 import {Icon} from 'ant-design-vue';
-import {CheckCircleOutlined, SyncOutlined, CloseCircleOutlined} from '@ant-design/icons-vue'
+import {
+  CheckCircleOutlined,
+  SyncOutlined,
+  CloseCircleOutlined,
+  UploadOutlined,
+  StarTwoTone
+} from '@ant-design/icons-vue'
 import Modal from '../components/base/modal.vue'
 import CreateForm from '../components/base/createForm.vue'
 import {Model, Fields, Form} from '@/type/form'
@@ -188,24 +230,29 @@ const column = [
 const tabList = [
   {
     key: 'info',
-    tab: '商品介绍',
-  }
-  // {
-  //   key: 'use',
-  //   tab: '使用请求',
-  // },
+    tab: '拍卖详情',
+  },
+  {
+    key: 'good',
+    tab: '商品详情',
+  },
 ];
 
 export default defineComponent({
   name: 'Auction',
-  components: {Modal, CreateForm, CheckCircleOutlined, SyncOutlined, CloseCircleOutlined},
+  components: {Modal, CreateForm, CheckCircleOutlined, SyncOutlined, CloseCircleOutlined, UploadOutlined, StarTwoTone},
   setup() {
     // =========基本数据==========
     const route = useRoute();
     const id = parseInt(route.params.id as string);
     const account = ref('');
-    // =========商品表格==========
+    // =========拍卖详情==========
     const state = reactive<{ data: Auction[] | {}, loading: boolean }>({
+      data: {},
+      loading: true,
+    })
+    // =========商品详情==========
+    const stateGood = reactive<{ data: Good[] | {}, loading: boolean }>({
       data: {},
       loading: true,
     })
@@ -265,12 +312,11 @@ export default defineComponent({
       }
       //奖励卖家KFAC
       try {
-        let  thisAuction = await getOneAuction(id);
-        await rewardPersonErcPoints(await getAccount(), thisAuction.beneficiary,Math.ceil(thisAuction.highestBid/2));
+        let thisAuction = await getOneAuction(id);
+        await rewardPersonErcPoints(await getAccount(), thisAuction.beneficiary, Math.ceil(thisAuction.highestBid / 2));
         console.log(thisAuction.beneficiary)
-        message.success('奖励卖家' + Math.ceil(thisAuction.highestBid/2) +  'KFAC成功');
-      }
-      catch (e) {
+        message.success('奖励卖家' + Math.ceil(thisAuction.highestBid / 2) + 'KFAC成功');
+      } catch (e) {
         message.error('奖励失败');
         console.log(e);
       }
@@ -297,18 +343,25 @@ export default defineComponent({
     // =========加载数据===========
     async function fetchData() {
 
-      //加载商品表格
+      //加载拍卖详情
       state.loading = true;
       try {
         [state.data] = await Promise.all([getOneAuction(id)]);
         console.log("state", state.data);
         state.loading = false;
-
-        //@ts-ignore
-        // fields.value.max = state.data.goal - state.data.amount;
       } catch (e) {
         console.log(e);
-        message.error('获取详情失败');
+        message.error('获取拍卖详情失败');
+      }
+      //加载商品详情
+      stateGood.loading = true;
+      try {
+        [stateGood.data] = await Promise.all([getOneGoodOfAuction(id)]);
+        console.log("stateGood", stateGood.data);
+        stateGood.loading = false;
+      } catch (e) {
+        console.log(e);
+        message.error('获取商品详情失败');
       }
 
       //加载竞拍历史
@@ -317,8 +370,6 @@ export default defineComponent({
         [history.data] = await Promise.all([getOneAuctionAllBidInfo(id)]);
         console.log("history", history.data);
         history.loading = false;
-        //@ts-ignore
-        // fields.value.max = state.data.goal - state.data.amount;
       } catch (e) {
         console.log("asdfasdf" + e);
         message.error('获取历史失败');
@@ -328,11 +379,11 @@ export default defineComponent({
 
     addListener(fetchData)
 
-    getAccount().then(res => account.value = res)
+    getAccount().then(res => account.value = res);
     fetchData();
-
     return {
       state,
+      stateGood,
       history,
       account,
       isOpen,

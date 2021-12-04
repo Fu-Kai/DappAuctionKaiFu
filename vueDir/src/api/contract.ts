@@ -1,25 +1,30 @@
 import Web3 from 'web3'
+import * as IPFS from 'ipfs-core'
 //@ts-ignore
 import OpenAuction from './OpenAuction.json'
 // @ts-ignore
 import KFAC_Token from './KFAC_Token.json'
 // @ts-ignore
 import Persons from './Persons.json'
+
 // const ipfs = await IPFS.create()
 // const { cid } = await ipfs.add('Hello world')
 // console.info(cid)
 //@ts-ignore
 const web3 = new Web3(window.ethereum);
-const personsContractAddress = '0x6354BE0014286018462b9b9D402CE23f29D9487B';
-const contract = new web3.eth.Contract(OpenAuction, '0x033c4eBd00CFe3e43c05aBEb617Fa3e2a914C9EC');
-const MyTokenContract = new web3.eth.Contract(KFAC_Token, '0xC40ed66aE773Ca6feA8493b9862A54671e096B80');
+const personsContractAddress = '0x470e947eA0309596a810A832d886445394308BE1';
+const KFACAddress = '0xC40ed66aE773Ca6feA8493b9862A54671e096B80';
+const contract = new web3.eth.Contract(OpenAuction.abi, OpenAuction.networks["5777"].address);
+const MyTokenContract = new web3.eth.Contract(KFAC_Token, KFACAddress);
 const personsContract = new web3.eth.Contract(Persons, personsContractAddress);
+// web3.eth.getBlock(402).then(console.log)
 
-function wei2ether(x: any) : string  {
+function wei2ether(x: any): string {
 
     return Web3.utils.fromWei(x, 'ether')
 }
- function ether2wei(x: number) : string {
+
+function ether2wei(x: number): string {
     return Web3.utils.toWei(x.toString(10), 'ether')
 }
 
@@ -33,6 +38,17 @@ export declare interface Bidder {
     addr: string,
     bidAmount: number,
     bidTime: number
+}
+
+export declare interface Good {
+    gid: number,
+    name: string,
+    owner: string,
+    picsHash: string,
+    used: boolean,
+    brand: string,
+    intro: string,
+    condition: number,
 }
 
 export declare interface Auction {
@@ -56,12 +72,15 @@ export declare interface Person {
     account: string,
     ercPoints: number
 }
+
 async function getTotalSupply(): Promise<number> {
     return await MyTokenContract.methods.totalSupply().call();
 }
+
 async function getCoinName(): Promise<string> {
     return await MyTokenContract.methods.name().call();
 }
+
 async function approve(_acc: string, _ercPoints: number) {
     await MyTokenContract.methods.approve(personsContractAddress, ether2wei(_ercPoints)).send({
         from: _acc,
@@ -77,20 +96,24 @@ async function getPersonErcPoints(): Promise<number> {
     const account = await getAccount();
     return parseInt(wei2ether(await personsContract.methods.getPersonErcPoints(account).call()));
 }
-async function rewardPersonErcPoints(_sender: string ,account: string, ercPoints: number) {
-     await personsContract.methods.rewardPersonErcPoints(account, ether2wei(ercPoints)).send({
+
+async function rewardPersonErcPoints(_sender: string, account: string, ercPoints: number) {
+    await personsContract.methods.rewardPersonErcPoints(account, ether2wei(ercPoints)).send({
         from: _sender,
         gas: 1000000
     });
 }
 
 async function deductPersonErcPoints(_acc: string, _ercPoints: number) {
-     await personsContract.methods.deductPersonErcPoints(_acc, ether2wei(_ercPoints)).send({
+    await personsContract.methods.deductPersonErcPoints(_acc, ether2wei(_ercPoints)).send({
         from: _acc,
         gas: 1000000
     });
 }
+
 //============personsContract methods End==============
+
+
 async function authenticate() {
     //@ts-ignore
     await window.ethereum.enable();
@@ -119,6 +142,24 @@ async function getAllAuctions(): Promise<Auction[]> {
     return result;
 }
 
+async function getOneGoodOfAuction(index: number): Promise<Good> {
+    const goodId = await contract.methods.auctionBoundGood(index).call();
+    //console.log('goodid'+goodId);
+    return await contract.methods.goods(goodId).call();
+}
+
+async function getAllGood(acc: any): Promise<Good[]> {
+    const length = await contract.methods.goodsLen().call();
+    const result = []
+    //逆序展示，最新发布的排卖在前
+    for (let i = length; i >= 1; i--) {
+        let g = await contract.methods.goods(i).call();
+        if(g.owner == acc)
+        result.push(g);
+    }
+
+    return result;
+}
 
 async function getOneAuctionOneBidInfo(index: number, num: number): Promise<Bidder> {
 
@@ -128,18 +169,14 @@ async function getOneAuctionOneBidInfo(index: number, num: number): Promise<Bidd
 }
 
 async function getOneAuctionAllBidInfo(index: number): Promise<Bidder[]> {
-
     const result = [];
-    const num = await contract.methods.getBiddersNum(index).call();
+    const data = await contract.methods.auctions(index).call();
+    const num = data.numBidders;
     for (let i = 1; i <= num; i++) {
         result.push(await getOneAuctionOneBidInfo(index, i));
     }
     console.log("info", result);
     return result;
-}
-
-async function getOneAuctionBiddersNum(index: number): Promise<number> {
-    return await contract.methods.getBiddersNum(index).call();
 }
 
 async function getBalance(): Promise<number> {
@@ -180,7 +217,7 @@ async function getMyAuctions(): Promise<{ bene: Auction[], purchase: Auction[], 
                 ...auction
             })
         }
-        if (account == auction.highestBidder && auction.endFlg) {
+        if ((account == auction.highestBidder && auction.endFlg) || (account == auction.beneficiary && auction.endFlg)) {
             result.purchase.push({
                 myBidAmount,
                 ...auction
@@ -203,8 +240,16 @@ async function bid(id: number, value: number) {
     });
 }
 
-async function newAuctionStart(account: string, title: string, info: string, amountStart: number, seconds: number, _bond: number) {
-    return await contract.methods.newAuctionStart(account, title, info, ether2wei(amountStart), seconds, ether2wei(_bond)).send({
+async function newAuctionStart(account: string, title: string, info: string, amountStart: number, seconds: number, _bond: number, used: boolean, brand: string, picsHash: string, name: string, intro: string) {
+    return await contract.methods.newAuctionStart(account, title, info, ether2wei(amountStart), seconds, ether2wei(_bond), used, brand, picsHash, name, intro).send({
+        from: account,
+        value: ether2wei(_bond),
+        gas: 1000000
+    });
+}
+
+async function reAuctionStart( gid: number,account: string, title: string, info: string, amountStart: number, seconds: number, _bond: number, picsHash: string) {
+    return await contract.methods.reAuctionStart(gid, account, title, info, picsHash,ether2wei(amountStart), seconds, ether2wei(_bond)).send({
         from: account,
         value: ether2wei(_bond),
         gas: 1000000
@@ -227,6 +272,20 @@ async function withdrawBond(id: number) {
     })
 }
 
+async function uploadToIpfs(x: any) {
+    const ipfs = await IPFS.create()
+
+    // @ts-ignore
+    const result = await ipfs.add(x)
+    console.info('https://ipfs.io/ipfs/' + result.path)
+    return result.path;
+}
+
+function BufferToUint8(x: any) {
+    // @ts-ignore
+    return (Array.prototype.slice.call(new Uint8Array(x)))
+}
+
 export {
     getAccount,
     authenticate,
@@ -234,12 +293,14 @@ export {
     getMyAuctions,
     getAllAuctions,
     getOneAuction,
+    getOneGoodOfAuction,
+    getAllGood,
     getOneAuctionOneBidInfo,
     getOneAuctionAllBidInfo,
-    getOneAuctionBiddersNum,
     getThisAuctionHighestBid,
     bid,
     newAuctionStart,
+    reAuctionStart,
     setAuctionEnd,
     withdrawBond,
     getContractBalance,
@@ -251,4 +312,6 @@ export {
     rewardPersonErcPoints,
     approve,
     deductPersonErcPoints,
+    uploadToIpfs,
+    BufferToUint8,
 }

@@ -2,11 +2,39 @@
   <div>
     <a-back-top/>
   </div>
+  <a-collapse style="margin-bottom: 10px">
+    <a-collapse-panel key="1" header="使用指南" >
+      <div>
+        <a-steps :current="current">
+          <a-step v-for="item in steps" :key="item.title" :title="item.title"/>
+        </a-steps>
+        <div class="steps-content">
+          {{ steps[current].content }}
+<!--          <img src="2.png">-->
+        </div>
+        <div class="steps-action">
+          <a-button v-if="current < steps.length - 1" type="primary" @click="next">Next</a-button>
+          <a-button
+              v-if="current == steps.length - 1"
+              type="primary"
+              @click="$message.success('Processing complete!')"
+          >
+            Done
+          </a-button>
+          <a-button v-if="current > 0" style="margin-left: 8px" @click="prev">Previous</a-button>
+        </div>
+      </div>
+    </a-collapse-panel>
+  </a-collapse>
+
+
+
+
   <div>
     <a-card class="ant-card-shadow">
       <template #title>
         <h3>
-          所有拍卖
+          拍卖大厅
           <a-tooltip placement="topRight" title="确认已准备足够的保证金">
             <a-button style="float: right;"
                       @click="openModal"
@@ -14,9 +42,8 @@
             </a-button>
           </a-tooltip>
         </h3>
-
       </template>
-      <a-table :columns="columns" :loading="state.loading" :data-source="state.data" >
+      <a-table :columns="columns" :loading="state.loading" :data-source="state.data">
         <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
           <div style="width:163px;padding: 8px;">
             <a-input
@@ -33,7 +60,9 @@
                 style="width: 68px; margin-right: 10px"
                 @click="handleSearch(selectedKeys, confirm, column.dataIndex)"
             >
-              <template #icon><SearchOutlined /></template>
+              <template #icon>
+                <SearchOutlined/>
+              </template>
               搜索
             </a-button>
             <a-button size="small" style="width: 68px" @click="handleReset(clearFilters)">
@@ -42,7 +71,7 @@
           </div>
         </template>
         <template #filterIcon="filtered">
-          <search-outlined :style="{ color: filtered ? '#108ee9' : undefined }" />
+          <search-outlined :style="{ color: filtered ? '#108ee9' : undefined }"/>
         </template>
         <template #time="{text, record}">
           {{ new Date(text * 1000).toLocaleString() }}
@@ -105,14 +134,13 @@
             <span style="color: gold">KFAC</span>
             积分代币
             <a-tooltip placement="topRight" title="当每件物品成功拍卖之后，卖家会获得与成交价的一半等额的KFAC代币" color="blue">
-            <QuestionCircleOutlined/>
+              <QuestionCircleOutlined/>
             </a-tooltip>
             ，你可以用来抵扣等额的保证金（1 KFAC 抵扣 1 ETH)
           </h5>
         </template>
         <a-icon type="ant-design"/>
         <create-form :model="model" :form="form" :fields="fields"/>
-
       </a-card>
     </Modal>
   </div>
@@ -121,33 +149,46 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, ref, reactive, watch, toRefs} from 'vue';
+import {defineComponent, reactive, ref, toRefs, watch} from 'vue';
 import Modal from '../components/base/modal.vue'
 import CreateForm from '../components/base/createForm.vue'
-import {Model, Fields, Form} from '@/type/form'
+import {Fields, Form, Model} from '@/type/form'
 import {
-  contract,
+  addListener,
+  Auction,
+  deductPersonErcPoints,
   getAccount,
   getAllAuctions,
-  Auction,
+  getPersonErcPoints,
+  getTotalSupply,
   newAuctionStart,
-  addListener,
-  getTotalSupply, getCoinName, getPersonErcPoints, rewardPersonErcPoints, approve, deductPersonErcPoints
 } from '@/api/contract'
 import {message} from 'ant-design-vue'
-import {CheckCircleOutlined, SyncOutlined, CloseCircleOutlined,SearchOutlined,QuestionCircleOutlined} from '@ant-design/icons-vue'
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  QuestionCircleOutlined,
+  SearchOutlined,
+  SyncOutlined,
+  UploadOutlined
+} from '@ant-design/icons-vue'
 import {useRouter} from 'vue-router'
-import _default from "ant-design-vue/es/color-picker";
-
-
-
-
 
 export default defineComponent({
 
   name: 'Home',
-  components: {Modal, CreateForm, CheckCircleOutlined, SyncOutlined, CloseCircleOutlined,SearchOutlined,QuestionCircleOutlined},
+  components: {
+    Modal,
+    CreateForm,
+    CheckCircleOutlined,
+    SyncOutlined,
+    CloseCircleOutlined,
+    SearchOutlined,
+    QuestionCircleOutlined,
+    UploadOutlined
+  },
   setup() {
+
     const searchState = reactive({
       searchText: '',
       searchedColumn: '',
@@ -157,7 +198,7 @@ export default defineComponent({
       {
         dataIndex: 'title',
         key: 'title',
-        title: '商品标题',
+        title: '拍卖标题',
         align: 'center',
         width: '20%',
         slots: {
@@ -225,7 +266,7 @@ export default defineComponent({
     })
 
     async function fetchData() {
-      console.log('积分余额',await getPersonErcPoints());
+      console.log('积分余额', await getPersonErcPoints());
       console.log(await getTotalSupply());
       state.loading = true;
       try {
@@ -254,6 +295,11 @@ export default defineComponent({
       deduction: 0,
       date: null,
       bond: 0,
+      used: 0,
+      brand: '',
+      picsHash: '',
+      name: '',
+      intro:'',
     })
 
     const fields = reactive<Fields>({
@@ -264,19 +310,43 @@ export default defineComponent({
       },
       title: {
         type: 'input',
+        label: '拍卖标题',
+        rule: {
+          required: true,
+          trigger: 'blur'
+        }
+      },
+      name: {
+        type: 'input',
         label: '商品名称',
         rule: {
           required: true,
           trigger: 'blur'
         }
       },
-      info: {
+      intro: {
         type: 'textarea',
         label: '商品简介',
         rule: {
           required: true,
           trigger: 'blur'
         }
+      },
+      brand: {
+        type: 'input',
+        label: '商品品牌',
+        rule: {
+          required: true,
+          trigger: 'blur'
+        }
+      },
+      used: {
+        type: 'radio',
+        label: '是否全新',
+      },
+      info: {
+        type: 'input',
+        label: '拍卖备注',
       },
       amountStart: {
         type: 'number',
@@ -293,18 +363,22 @@ export default defineComponent({
         type: 'time',
         label: '截止日期',
       },
+      file: {
+        type: 'upload',
+        label: '上传主图',
+      },
       bond: {
         type: 'number',
         label: '还需缴保证金',
-        min:1
+        min: 1
       },
     })
     watch(() => state.data, async () => {
       console.log('变化')
 
-    },{
+    }, {
       deep: true,
-      immediate:true
+      immediate: true
     });
 
     const form = reactive<Form>({
@@ -316,17 +390,21 @@ export default defineComponent({
       finish: async () => {
         const seconds = Math.ceil(new Date(model.date).getTime() / 1000);
         try {
-          let _bond = model.amountStart*2-model.deduction;
+          console.log('model',model)
+          let _bond = model.amountStart * 2 - model.deduction;
           console.log(model.account, model.title, model.info, model.amountStart, seconds, _bond);
-          if(model.deduction != 0) {
+          if (model.deduction != 0) {
+            console.log(model.deduction)
             try {
               await deductPersonErcPoints(await getAccount(), model.deduction)
-              message.success('扣除' + model.deduction+'KFAC成功')
+              message.success('扣除' + model.deduction + 'KFAC成功')
             } catch (e) {
               message.error('扣除KFAC失败')
             }
           }
-          await newAuctionStart(model.account, model.title, model.info, model.amountStart, seconds, _bond);
+          let used;
+          used = model.used != 0;
+          await newAuctionStart(model.account, model.title, model.info, model.amountStart, seconds, _bond, used, model.brand, model.picsHash, model.name,model.intro);
           message.success('已上架~')
           closeModal();
           await fetchData();
@@ -353,7 +431,13 @@ export default defineComponent({
     }
     addListener(fetchData)
     fetchData();
-
+    const current = ref<number>(0);
+    const next = () => {
+      current.value++;
+    };
+    const prev = () => {
+      current.value--;
+    };
     return {
       openModal,
       isOpen,
@@ -367,8 +451,40 @@ export default defineComponent({
       handleReset,
       searchInput,
       ...toRefs(searchState),
+      current,
+      steps: [
+        {
+          title: 'First',
+          content: '点击发起拍卖按扭来开始',
+        },
+        {
+          title: 'Second',
+          content: 'Second-content',
+        },
+        {
+          title: 'Last',
+          content: 'Last-content',
+        },
+      ],
+      next,
+      prev,
     }
   }
 });
 </script>
 
+<style scoped>
+.steps-content {
+  margin-top: 16px;
+  border: 1px dashed #e9e9e9;
+  border-radius: 6px;
+  background-color: #fafafa;
+  min-height: 200px;
+  text-align: center;
+  padding-top: 80px;
+}
+
+.steps-action {
+  margin-top: 24px;
+}
+</style>

@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 contract OpenAuction {
 
+
     // 出价人结构定义
     struct Bidder {
         address payable addr;      // 出价人的地址
@@ -10,15 +11,16 @@ contract OpenAuction {
         uint bidTime;              // 出价时间
     }
 
-    // 物品状态枚举类型
-    enum ItemCondition {
-        Bidding,                    //正在拍卖（有出价，在期间内）
-        nobodyBid,                  //拍卖结束 无人出价 （时间到期，没有人出价） （卖家可点击按扭退保证金）
-        noYetBid,                   //暂无出价  (没到期，出价为0)
-        successedAuction,           //拍卖成功 （买家点击收货，将货款和保证金一起结账给卖家）
-        inRoad                      //卖家发货中（时间到期，并且已产生最高出价者）
+    struct Good {
+        uint gid;
+        string name;
+        bool used;
+        string picsHash;
+        string intro;
+        address owner;
+        string brand;
+        ItemCondition condition;
     }
-
     struct Auction {
         string title;                                   //商品标题
         string info;                                    //商品简介
@@ -34,18 +36,46 @@ contract OpenAuction {
         bool endFlg;                                    //拍卖结束标志
         uint endTime;                                   //拍卖期限
     }
+    // 物品状态枚举类型
+    enum ItemCondition {
+        free,
+        Bidding,                    //正在拍卖（有出价，在期间内）
+        nobodyBid,                  //拍卖结束 无人出价 （时间到期，没有人出价） （卖家可点击按扭退保证金）
+        noYetBid,                   //暂无出价  (没到期，出价为0)
+        successedAuction,           //拍卖成功 （买家点击收货，将货款和保证金一起结账给卖家）
+        inRoad                      //卖家发货中（时间到期，并且已产生最高出价者）
+    }
 
-    uint public auctionsLen;                            // 拍卖项目数量
     mapping(uint => Auction) public auctions;           // 所有的拍卖项目
+    uint public auctionsLen;                            // 拍卖项目数量
+    mapping(uint => Good) public goods;                 // 货物对应的id
+    uint public goodsLen;                               // 物品数量
+    mapping(uint => uint) public auctionBoundGood;      // 该拍卖绑定的货物
+
     event HighestBidIncreased(address bidder, uint bidAmount, uint bidTime, uint id);
     event AuctionEnded(address winner, uint amount, uint id);
 
     //启动拍卖活动
-    function newAuctionStart(address payable beneficiary, string memory title, string memory info, uint amountStart, uint endTime, uint _bond) public payable returns(uint) {
+    function newAuctionStart (
+        address payable beneficiary,
+        string memory title,
+        string memory info,
+        uint amountStart,
+        uint endTime,
+        uint _bond,
+        bool used,
+        string memory brand,
+        string memory picsHash,
+        string memory name,
+        string memory intro
+    )
+    public payable
+    returns(uint) {
+
         //不能早于当前时间，起拍价格要大于0，保证金大于2*0
         require(endTime > block.timestamp);
         require(amountStart > 0);
-        require(msg.value > 2*0);
+        require(msg.value >= 2*0);
         auctionsLen++;
         Auction storage a = auctions[auctionsLen];
         a.beneficiary = beneficiary;
@@ -59,12 +89,72 @@ contract OpenAuction {
         a.endFlg = false;
         a.condition = ItemCondition.noYetBid;
         a.bond = _bond;
+
+        goodsLen++;
+        Good storage g = goods[goodsLen];
+        g.gid = goodsLen;
+        g.name = name;
+        g.used = used;
+        g.picsHash = picsHash;
+        g.brand = brand;
+        g.owner = msg.sender;
+        g.intro = intro;
+        g.condition = ItemCondition.Bidding;
+        auctionBoundGood[auctionsLen] = goodsLen;
+        return auctionsLen;
+    }
+    //搜索物品当前所属的拍卖项目有bu'g
+    function searchGoodBelongAuction(uint gid) public view returns(uint) {
+        uint aid;
+        for(uint i = 1; i <=auctionsLen; i++) {
+            if(auctionBoundGood[i] == gid) {
+                aid = i;
+                break;
+            }
+        }
+        return aid;
+    }
+    //重新上架
+    function reAuctionStart(
+        uint gid,
+        address payable beneficiary,
+        string memory title,
+        string memory info,
+        string memory picsHash,
+        uint amountStart,
+        uint endTime,
+        uint _bond)
+    public payable returns(uint) {
+        //不能早于当前时间，起拍价格要大于0，保证金大于2*0
+        require(endTime > block.timestamp);
+        require(amountStart > 0);
+        require(msg.value >= 2*0);
+        //自动设置为二手
+        goods[gid].used = true;
+        //新建拍卖
+        auctionsLen++;
+        Auction storage a = auctions[auctionsLen];
+        a.beneficiary = beneficiary;
+        a.title = title;
+        a.info = info;
+        a.amountStart = amountStart;
+        a.numBidders = 0;
+        a.highestBid = 0;
+        a.endTime = endTime;
+        a.startFlg = true;
+        a.endFlg = false;
+        a.condition = ItemCondition.noYetBid;
+        a.bond = _bond;
+        goods[gid].condition = ItemCondition.Bidding;
+        goods[gid].picsHash = picsHash;
+        //新拍卖绑定旧物品
+        auctionBoundGood[auctionsLen] = gid;
         return auctionsLen;
     }
     function getAuctionCondition(uint id) public view returns(ItemCondition) {
         return(auctions[id].condition);
     }
-    function bid(uint id) public payable {
+    function bid (uint id) public payable {
         //出价金额大于0，出价金额大于当前最高出价者，出价金额大于起拍价格
         require(msg.value > 0 && msg.value > auctions[id].highestBid && msg.value >= auctions[id].amountStart);
         require(auctions[id].endTime > block.timestamp);
@@ -88,13 +178,9 @@ contract OpenAuction {
         emit HighestBidIncreased(msg.sender, msg.value, block.timestamp, id);
 
     }
-    //获取某个拍卖的所以记录
-
-    function getBiddersNum(uint id) public view returns (uint) {
-        return auctions[id].numBidders;
-    }
-
-    function getOneAuctionBidInfo(uint id, uint num) public view returns (address addr, uint bidAmount, uint bidTime) {
+    //获取某个拍卖的竞拍历史
+    function getOneAuctionBidInfo(uint id, uint num)
+    public view returns (address addr, uint bidAmount, uint bidTime) {
         Bidder storage b = auctions[id].Bidders[num];
         return (b.addr, b.bidAmount, b.bidTime);
     }
@@ -124,12 +210,12 @@ contract OpenAuction {
         require(block.timestamp >= auctions[id].endTime, "auction not yet ended");
         //无任何人出价
         require(auctions[id].highestBid == 0);
-
         //将保证金，移交给受益人
         auctions[id].beneficiary.transfer(auctions[id].bond);
         auctions[id].bond = 0;
+        uint gid = auctionBoundGood[id];
+        goods[gid].condition = ItemCondition.free;
     }
-
     //结束拍卖，结账
     function setAuctionEnd(uint id) public {
         //区块时间需大于拍卖期限 最终最高出价者确认收货才能结束拍卖 拍卖需还没设置为已结束
@@ -145,6 +231,10 @@ contract OpenAuction {
         //将保证金，移交给受益人
         auctions[id].beneficiary.transfer(auctions[id].bond);
         auctions[id].bond = 0;
+        //物品所有者切换
+        uint gid = auctionBoundGood[id];
+        goods[gid].owner = msg.sender;
+        goods[gid].condition = ItemCondition.free;
     }
 
 }

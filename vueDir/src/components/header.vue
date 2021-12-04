@@ -1,9 +1,10 @@
 <template>
   <header>
     <nav :class="['nav', {'nav-active': scrollTop > 0}]">
-      <a class="logo"><img src="/logo2.png"></a>
-      <router-link to="/">所有拍卖</router-link>
+      <a class="logo" @click="goHome"><img src="/logo2.png"></a>
+      <router-link to="/">拍卖大厅</router-link>
       <router-link to="/myself">我的拍卖</router-link>
+      <router-link to="/Goods">展览柜</router-link>
       <span :style="{ flex: 1 }"></span>
       <a @click="handleClick">{{ "当前账户：" + account }}</a>
     </nav>
@@ -22,10 +23,17 @@
 </template>
 
 <script lang="ts">
-import {ref, onMounted, toRefs, defineComponent, reactive} from 'vue'
+import {defineComponent, onMounted, reactive, ref, toRefs} from 'vue'
 import {useRouter} from 'vue-router'
 import {message} from 'ant-design-vue'
-import {authenticate, getAccount, addListener, getContractBalance, getBalance, getPersonErcPoints} from '@/api/contract'
+import {
+  addListener,
+  authenticate,
+  getAccount,
+  getBalance,
+  getContractBalance,
+  getPersonErcPoints
+} from '@/api/contract'
 
 export default defineComponent({
 
@@ -68,9 +76,16 @@ export default defineComponent({
     }
 
     const router = useRouter();
+    const goHome = () => {
+      router.push(`/`)
+    }
     handleClick();
     addListener(handleClick)
-    return {scrollTop, handleClick, account, ...toRefs(state), darkSwitch, GetContractBalance}
+
+
+
+
+    return {scrollTop, handleClick, account, ...toRefs(state), darkSwitch, GetContractBalance,goHome}
   }
 })
 </script>
@@ -79,7 +94,10 @@ export default defineComponent({
 header {
   height: 100px;
   /*background: url("/header.png") no-repeat top/cover;*/
-  background: #222;
+  background: #141E30;  /* fallback for old browsers */
+  background: -webkit-linear-gradient(to right, #243B55, #141E30);  /* Chrome 10-25, Safari 5.1-6 */
+  background: linear-gradient(to right, #243B55, #141E30); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+
 
 }
 
