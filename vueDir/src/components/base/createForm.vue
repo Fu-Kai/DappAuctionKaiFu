@@ -216,6 +216,7 @@ export default {
     )
     const value = ref(2);
     const value2 = ref(0);
+
     function radioChange() {
       console.log(value);
     }
@@ -254,13 +255,14 @@ export default {
         message.error('委托失败');
       }
     }
+
     async function upload() {
       try {
         let hash = await uploadToIpfs(buffer.value);
 
         message.success('提交至IPFS成功  哈希值:' + hash);
         props.model.picsHash = hash;
-        return(hash);
+        return (hash);
       } catch (e) {
         console.log(e);
       }

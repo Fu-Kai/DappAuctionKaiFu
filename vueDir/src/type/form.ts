@@ -23,7 +23,7 @@ export declare interface Field {
         name?: string,
         action?: string,
         beforeUpload?: () => boolean,
-        onChange?: (info:any) => void,
+        onChange?: (info: any) => void,
         data?: () => Object
     },
     search?: {
@@ -31,12 +31,12 @@ export declare interface Field {
         //role: Role
     },
     autoComplete?: {
-        handleSearch: (data:any, now: string) => void
+        handleSearch: (data: any, now: string) => void
     },
     rule?: {
         required?: boolean,
         message?: string,
-        validator?: (rule:any, value:any) => Promise<string> | Promise<null>,
+        validator?: (rule: any, value: any) => Promise<string> | Promise<null>,
         trigger: 'blur' | 'change'
     },
     customRender?: {

@@ -193,7 +193,7 @@
   </div>
 </template>
 <script lang="ts">
-import {defineComponent, ref, reactive, computed} from 'vue';
+import {defineComponent, ref, reactive} from 'vue';
 import {
   getOneAuction,
   getOneAuctionAllBidInfo,
@@ -205,10 +205,11 @@ import {
   addListener,
   setAuctionEnd,
   withdrawBond,
-  getThisAuctionHighestBid, rewardPersonErcPoints, getOneGoodOfAuction
+  rewardPersonErcPoints,
+  getOneGoodOfAuction
 } from '@/api/contract'
 import {useRoute} from 'vue-router'
-import {message, Empty} from 'ant-design-vue';
+import {message} from 'ant-design-vue';
 import {Icon} from 'ant-design-vue';
 import {
   CheckCircleOutlined,

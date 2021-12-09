@@ -83,9 +83,7 @@ export default defineComponent({
     addListener(handleClick)
 
 
-
-
-    return {scrollTop, handleClick, account, ...toRefs(state), darkSwitch, GetContractBalance,goHome}
+    return {scrollTop, handleClick, account, ...toRefs(state), darkSwitch, GetContractBalance, goHome}
   }
 })
 </script>
@@ -94,8 +92,8 @@ export default defineComponent({
 header {
   height: 100px;
   /*background: url("/header.png") no-repeat top/cover;*/
-  background: #141E30;  /* fallback for old browsers */
-  background: -webkit-linear-gradient(to right, #243B55, #141E30);  /* Chrome 10-25, Safari 5.1-6 */
+  background: #141E30; /* fallback for old browsers */
+  background: -webkit-linear-gradient(to right, #243B55, #141E30); /* Chrome 10-25, Safari 5.1-6 */
   background: linear-gradient(to right, #243B55, #141E30); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
 
 

@@ -17,6 +17,7 @@ const KFACAddress = '0xC40ed66aE773Ca6feA8493b9862A54671e096B80';
 const contract = new web3.eth.Contract(OpenAuction.abi, OpenAuction.networks["5777"].address);
 const MyTokenContract = new web3.eth.Contract(KFAC_Token, KFACAddress);
 const personsContract = new web3.eth.Contract(Persons, personsContractAddress);
+
 // web3.eth.getBlock(402).then(console.log)
 
 function wei2ether(x: any): string {
@@ -154,8 +155,8 @@ async function getAllGood(acc: any): Promise<Good[]> {
     //逆序展示，最新发布的排卖在前
     for (let i = length; i >= 1; i--) {
         let g = await contract.methods.goods(i).call();
-        if(g.owner == acc)
-        result.push(g);
+        if (g.owner == acc)
+            result.push(g);
     }
 
     return result;
@@ -248,8 +249,8 @@ async function newAuctionStart(account: string, title: string, info: string, amo
     });
 }
 
-async function reAuctionStart( gid: number,account: string, title: string, info: string, amountStart: number, seconds: number, _bond: number, picsHash: string) {
-    return await contract.methods.reAuctionStart(gid, account, title, info, picsHash,ether2wei(amountStart), seconds, ether2wei(_bond)).send({
+async function reAuctionStart(gid: number, account: string, title: string, info: string, amountStart: number, seconds: number, _bond: number, picsHash: string) {
+    return await contract.methods.reAuctionStart(gid, account, title, info, picsHash, ether2wei(amountStart), seconds, ether2wei(_bond)).send({
         from: account,
         value: ether2wei(_bond),
         gas: 1000000

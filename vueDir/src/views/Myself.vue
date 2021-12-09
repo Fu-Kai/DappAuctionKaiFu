@@ -156,7 +156,6 @@
 import {defineComponent, ref, reactive} from 'vue';
 import Modal from '../components/base/modal.vue'
 import CreateForm from '../components/base/createForm.vue'
-import {Model, Fields, Form} from '@/type/form'
 import {
   getAccount,
   Auction,
@@ -356,6 +355,7 @@ export default defineComponent({
       purchase: [],
       bid: []
     })
+
     async function fetchData() {
       state.loading = true;
       try {

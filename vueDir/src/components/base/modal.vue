@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="my-mask" @click="handleClickMask" />
+  <div v-if="visible" class="my-mask" @click="handleClickMask"/>
   <transition name="modal-scale">
     <div class="fixed-center" v-show="visible">
       <slot></slot>
@@ -9,11 +9,11 @@
 
 <script>
 export default {
-  props: { visible: Boolean },
+  props: {visible: Boolean},
   setup(props, ct) {
     // 点击遮罩
     const handleClickMask = () => ct.emit('update:visible', false)
-    return { handleClickMask }
+    return {handleClickMask}
   }
 }
 </script>

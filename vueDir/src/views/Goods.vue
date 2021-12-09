@@ -3,14 +3,14 @@
     <a-back-top/>
   </div>
   <a-list :grid="{ gutter: 16, column: 3 }" :data-source="stateGoods.data" :loading="stateGoods.loading">
-    <template #renderItem="{ item }" >
+    <template #renderItem="{ item }">
       <a-list-item v-if="item.owner == account">
         <a-card :title="item.name" style="font-size: 13px;">
           <template #extra>
             <a-button type="danger" @click="openModal(item)" v-if="item.condition == 0">
               上架
             </a-button>
-            <a-button type="danger"  v-else-if="item.condition == 1" disabled>
+            <a-button type="danger" v-else-if="item.condition == 1" disabled>
               拍卖中...
             </a-button>
           </template>
@@ -51,9 +51,11 @@
 import {defineComponent, ref, reactive} from 'vue';
 import {
   getAccount,
-  Auction,
-  getMyAuctions,
-  addListener, Good, getAllGood, deductPersonErcPoints, reAuctionStart
+  addListener,
+  Good,
+  getAllGood,
+  deductPersonErcPoints,
+  reAuctionStart
 } from '@/api/contract'
 import {message} from 'ant-design-vue'
 import Modal from '../components/base/modal.vue'

@@ -3,14 +3,14 @@
     <a-back-top/>
   </div>
   <a-collapse style="margin-bottom: 10px">
-    <a-collapse-panel key="1" header="使用指南" >
+    <a-collapse-panel key="1" header="使用指南">
       <div>
         <a-steps :current="current">
           <a-step v-for="item in steps" :key="item.title" :title="item.title"/>
         </a-steps>
         <div class="steps-content">
           {{ steps[current].content }}
-<!--          <img src="2.png">-->
+          <!--          <img src="2.png">-->
         </div>
         <div class="steps-action">
           <a-button v-if="current < steps.length - 1" type="primary" @click="next">Next</a-button>
@@ -26,8 +26,6 @@
       </div>
     </a-collapse-panel>
   </a-collapse>
-
-
 
 
   <div>
@@ -299,7 +297,7 @@ export default defineComponent({
       brand: '',
       picsHash: '',
       name: '',
-      intro:'',
+      intro: '',
     })
 
     const fields = reactive<Fields>({
@@ -390,7 +388,7 @@ export default defineComponent({
       finish: async () => {
         const seconds = Math.ceil(new Date(model.date).getTime() / 1000);
         try {
-          console.log('model',model)
+          console.log('model', model)
           let _bond = model.amountStart * 2 - model.deduction;
           console.log(model.account, model.title, model.info, model.amountStart, seconds, _bond);
           if (model.deduction != 0) {
@@ -404,7 +402,7 @@ export default defineComponent({
           }
           let used;
           used = model.used != 0;
-          await newAuctionStart(model.account, model.title, model.info, model.amountStart, seconds, _bond, used, model.brand, model.picsHash, model.name,model.intro);
+          await newAuctionStart(model.account, model.title, model.info, model.amountStart, seconds, _bond, used, model.brand, model.picsHash, model.name, model.intro);
           message.success('已上架~')
           closeModal();
           await fetchData();
